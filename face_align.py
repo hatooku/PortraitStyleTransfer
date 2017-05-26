@@ -115,11 +115,12 @@ def pose_transfer(img_example_name, img_name, size, show):
 
 
 # f1 is example
-img_example_name = 'face_1.jpg'
-img_name = 'test_face_j.jpg' 
+img_example_name = './images/example_1.png'
+x = cv2.imread(img_example_name)
+img_name = './images/face_1.jpg' 
 ##img_example_name = 'face_1.jpg'
 #img_name = 'test_face.jpg' 
-dst = pose_transfer(img_example_name, img_name, 500, True)
+dst = pose_transfer(img_example_name, img_name, 500, False)
 cv2.imshow('d', dst)
 cv2.waitKey(0)
 
