@@ -19,7 +19,7 @@ def rect_center(coords):
 """ converts images to a color scheme that cv2 can display 
    
     """
-def cv2_display(image):
+def red_blue_invert(image):
     im2 = image.copy()
     im2[:, :, 0] = image[:, :, 2]
     im2[:, :, 2] = image[:, :, 0]
@@ -82,12 +82,12 @@ def affine_transfer(img_example, img, coords_example, coords, show):
         clone_exmp = img_example.copy()
         for i in [0, 1, 2]:
             cv2.circle(clone, (pts[i][0], pts[i][1]), 4, (0,255,0), -1)
-            cv2.imshow('bitch', cv2_display(clone))
+            cv2.imshow('bitch', clone)
             cv2.waitKey(0)
 
         for i in [0, 1, 2]:
             cv2.circle(clone_exmp, (pts_example[i][0], pts_example[i][1]), 4, (0,255,0), -1)
-            cv2.imshow('exmpl', cv2_display(clone_exmp))
+            cv2.imshow('exmpl', clone_exmp)
             cv2.waitKey(0)
 
     rows,cols,ch = img.shape
@@ -126,9 +126,9 @@ def get_facial_features(image, show=False):
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-    # load the input image, resize it, and convert it to grayscale
-
+    # convert it to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
 
     # detect faces in the grayscale image
     rects = detector(gray, 1)
@@ -165,13 +165,13 @@ def get_facial_features(image, show=False):
 
         if show:
             # show the particular face part
-            cv2.imshow("ROI", cv2_display(roi))
-            cv2.imshow("Image", cv2_display(clone))
+            cv2.imshow("ROI", roi)
+            cv2.imshow("Image", clone)
             cv2.waitKey(0)
 
     if show:
         # visualize all facial landmarks with a transparent overlay
-        output = face_utils.visualize_facial_landmarks(image, shape)
+        output = face_utils.visualize_facial_landmarks(red_blue_invert(image), shape)
         plt.imshow(output)
         plt.show()
     return feature_points, center_coords
@@ -277,8 +277,8 @@ def morph_image(img_example, img, fts_example, fts, a, b, p_const, use_all_featu
                         cv2.line(clone, tuple(p), tuple(q),(0,255,0),2)
                         cv2.line(clone_two, tuple(p1), tuple(q1),(0,255,0),2)
                 if show and i == 0 and j == 0:
-                    cv2.imshow("Image", cv2_display(clone))
-                    cv2.imshow("Image_two", cv2_display(clone_two))
+                    cv2.imshow("Image", clone)
+                    cv2.imshow("Image_two", clone_two)
                     cv2.waitKey(0)
                     
             X_morph = x + Dsum / weight_sum
@@ -341,7 +341,9 @@ def get_points_for_morph(features):
 """ Matches the pose between two images """
 def pose_transfer(img_example_pil, img_pil, show=True, a=0.1, b=1.25, p=0.5):
     img = np.asarray(img_pil, dtype='uint8')
-    img_example = content_array = np.asarray(img_example_pil, dtype='uint8')
+    img = red_blue_invert(img)
+    img_example = np.asarray(img_example_pil, dtype='uint8')
+    img_example = red_blue_invert(img_example)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray_example = cv2.cvtColor(img_example, cv2.COLOR_BGR2GRAY)
@@ -361,14 +363,16 @@ def pose_transfer(img_example_pil, img_pil, show=True, a=0.1, b=1.25, p=0.5):
     morph = morph_image(dst, img, features_example, features, a, b, p, use_all_features=False, show=show)
     print ("time spent morphing: %f seconds" % (time.time() - t))
 
+    dst = red_blue_invert(dst)
+    morph = red_blue_invert(morph)
     
     plt.title("Transformation after Pose Transfer")
-    a = plt.subplot(142),plt.imshow(cv2_display(img)), plt.title('Input')
-    b = plt.subplot(141),plt.imshow(cv2_display(img_example)),plt.title('Example')
-    c = plt.subplot(143),plt.imshow(cv2_display(dst)),plt.title('Affine Transfer')
-    d = plt.subplot(144),plt.imshow(cv2_display(morph)),plt.title('Morph')
+    a = plt.subplot(142),plt.imshow(red_blue_invert(img)), plt.title('Input')
+    b = plt.subplot(141),plt.imshow(red_blue_invert(img_example)),plt.title('Example')
+    c = plt.subplot(143),plt.imshow(dst),plt.title('Affine Transfer')
+    d = plt.subplot(144),plt.imshow(morph),plt.title('Morph')
     plt.show()
-    return morph 
+    return Image.fromarray(morph)
 
 if __name__ == "__main__":
     height = 512
@@ -377,7 +381,7 @@ if __name__ == "__main__":
     img_name = './images/example_1.png'
     #img_name = './images/face_3.jpg' 
     #img_name = './images/styles/portrait1.jpg' 
-    img_example_name = './images/face_1.jpg'
+    img_example_name = './images/face1.png'
     #img_example_name = './images/example_2.png'
     #img_example_name = './images/styles/portrait1.jpg' 
 
@@ -391,7 +395,7 @@ if __name__ == "__main__":
     style_image = Image.open(img_example_name)
     style_image = style_image.resize((height, width))
 
-    res = pose_transfer(style_image, content_image, True, a, b, p)
+    res = pose_transfer(style_image, content_image, False, a, b, p)
     # Code to crop the image if needed:
     # gray = cv2.cvtColor(res,cv2.COLOR_BGR2GRAY)
     # _,thresh = cv2.threshold(gray,1,255,cv2.THRESH_BINARY)
@@ -399,6 +403,5 @@ if __name__ == "__main__":
     # cnt = contours[0]
     # x,y,w,h = cv2.boundingRect(cnt)
     # res = res[y:y+h,x:x+w]
-    cv2.imshow('result', cv2_display(res))
+    res.show()
     cv2.waitKey(0)
-
