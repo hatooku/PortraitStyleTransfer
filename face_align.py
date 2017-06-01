@@ -227,7 +227,7 @@ def morph_image(img_example, img, fts_example, fts, a, b, p_const, use_all_featu
     res = img_example.copy()
 
     width = len(img_example)
-    height = len(img_example[0])
+    width = len(img_example[0])
     if use_all_features:
         features_example = fts_example
         features = fts
@@ -235,11 +235,13 @@ def morph_image(img_example, img, fts_example, fts, a, b, p_const, use_all_featu
         features_example = get_points_for_morph(fts_example)
         features = get_points_for_morph(fts)
 
+    t  = time.time()
     # for each pixel in the image
     for i in range(width):
         if (i % 50 == 0) and i > 0:
             print ("Done with %f percent" % (100. * i / width))
-        for j in range(height):
+            print ("time spent morphing: %f seconds" % (time.time() - t))
+        for j in range(width):
             x = np.array([i, j])
             Dsum = np.array([0., 0.])
             weight_sum = 0
@@ -298,16 +300,16 @@ def morph_one_line(img_example, img, features_example, features):
     q1 = features_example[5][1]
 
     width = len(img)
-    height = len(img[0])
+    width = len(img[0])
 
     for i in range(width):
-        for j in range(height):
+        for j in range(width):
             x = np.array([i, j])
             u = get_u(p, q, x)
             v = get_v(p, q, x)
             x1 = get_x1(u, v, p1, q1)
 
-            x1 = trim_x_morph(x1, width, height)
+            x1 = trim_x_morph(x1, width, width)
             dst[i][j] = img_example[int(x1[0])][int(x1[1])]
     return dst
 
@@ -339,7 +341,7 @@ def get_points_for_morph(features):
     return points
 
 """ Matches the pose between two images """
-def pose_transfer(img_example_pil, img_pil, show=True, a=0.1, b=1.25, p=0.5):
+def pose_transfer(img_example_pil, img_pil, show=False, a=100, b=1.25, p=0.5):
     img = np.asarray(img_pil, dtype='uint8')
     img = red_blue_invert(img)
     img_example = np.asarray(img_example_pil, dtype='uint8')
@@ -354,16 +356,19 @@ def pose_transfer(img_example_pil, img_pil, show=True, a=0.1, b=1.25, p=0.5):
     features, coords = get_facial_features(img, show)
     print ('performing affine transfer')
     dst = affine_transfer(img_example, img, coords_example, coords, False)
+    #dst = img_example
     gray_example = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
     #sift_flow(gray_example, gray)
-    features_example, coords_example = get_facial_features(dst, show)
+    features_example, coords_example = get_facial_features(dst, False)
 
     print ('morphing')
     t  = time.time()
-    morph = morph_image(dst, img, features_example, features, a, b, p, use_all_features=False, show=show)
+    #morph = dst
+    morph = morph_image(dst, img, features_example, features, a, b, p, use_all_features=False, show=False)
     print ("time spent morphing: %f seconds" % (time.time() - t))
 
     dst = red_blue_invert(dst)
+    
     morph = red_blue_invert(morph)
     
     plt.title("Transformation after Pose Transfer")
@@ -375,25 +380,24 @@ def pose_transfer(img_example_pil, img_pil, show=True, a=0.1, b=1.25, p=0.5):
     return Image.fromarray(morph)
 
 if __name__ == "__main__":
-    height = 512
-    width = 512
+    width = 1000
+    height = 1400
 
-    img_name = './images/example_1.png'
-    #img_name = './images/face_3.jpg' 
+    img_name = './images/me.jpg' 
     #img_name = './images/styles/portrait1.jpg' 
-    img_example_name = './images/face1.png'
-    #img_example_name = './images/example_2.png'
-    #img_example_name = './images/styles/portrait1.jpg' 
+    #img_example_name = './images/face_4.jpg'
+    img_example_name = './images/styles/photo1.png'
+    #img_example_name = './images/styles/portrait3.jpg' 
 
-    a = 100 # larger A = smoother warp but less precise
+    a = 150 # larger A = smoother warp but less precise
     b = 1.25 # the larger B, the more points will only be warped based on nearby lines and less from far ones
     p = 0.5  # # larger p gives longer lines more weight than short ones
 
     content_image = Image.open(img_name)
-    content_image = content_image.resize((height, width))
+    content_image = content_image.resize((width, height))
 
     style_image = Image.open(img_example_name)
-    style_image = style_image.resize((height, width))
+    style_image = style_image.resize((width, height))
 
     res = pose_transfer(style_image, content_image, False, a, b, p)
     # Code to crop the image if needed:
@@ -403,5 +407,7 @@ if __name__ == "__main__":
     # cnt = contours[0]
     # x,y,w,h = cv2.boundingRect(cnt)
     # res = res[y:y+h,x:x+w]
-    res.show()
-    cv2.waitKey(0)
+    img = np.asarray(content_image, dtype='uint8')
+    res = np.asarray(res, dtype='uint8')
+    cv2.imwrite('./images/results/content_image_b.jpg', red_blue_invert(img))
+    cv2.imwrite('./images/results/style_image_b.jpg', red_blue_invert(res))
