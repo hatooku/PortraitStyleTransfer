@@ -227,7 +227,7 @@ def morph_image(img_example, img, fts_example, fts, a, b, p_const, use_all_featu
     res = img_example.copy()
 
     width = len(img_example)
-    width = len(img_example[0])
+    height = len(img_example[0])
     if use_all_features:
         features_example = fts_example
         features = fts
@@ -241,7 +241,7 @@ def morph_image(img_example, img, fts_example, fts, a, b, p_const, use_all_featu
         if (i % 50 == 0) and i > 0:
             print ("Done with %f percent" % (100. * i / width))
             print ("time spent morphing: %f seconds" % (time.time() - t))
-        for j in range(width):
+        for j in range(height):
             x = np.array([i, j])
             Dsum = np.array([0., 0.])
             weight_sum = 0
@@ -300,16 +300,16 @@ def morph_one_line(img_example, img, features_example, features):
     q1 = features_example[5][1]
 
     width = len(img)
-    width = len(img[0])
+    height = len(img[0])
 
     for i in range(width):
-        for j in range(width):
+        for j in range(height):
             x = np.array([i, j])
             u = get_u(p, q, x)
             v = get_v(p, q, x)
             x1 = get_x1(u, v, p1, q1)
 
-            x1 = trim_x_morph(x1, width, width)
+            x1 = trim_x_morph(x1, width, height)
             dst[i][j] = img_example[int(x1[0])][int(x1[1])]
     return dst
 
